@@ -401,12 +401,24 @@ class BinaryIO {
               grid_layout[2]=gLattice[2];
               grid_layout[3]=gLattice[3];
               qlat::Geometry geo;
-              geo.init(grid_layout, 1);
-              qlat::Field<Complex> f;
+              geo.init(grid_layout);
+#ifdef SINGLE_PRECISION_IO
+              std::cout<< GridLogMessage<<"Single Precision " << std::endl;
+              qlat::Field<ComplexF> f; // Single precision
+#else
+              qlat::Field<Complex> f; // Double precision (default)
+#endif
               f.init(geo, 3);// 3 colors
               qlat::read_field(f,filename,file);
-              qlat::assign(qlat::Vector<Complex>((Complex*)iodata.data(),
-                                                 3*iodata.size()),qlat::get_data(f));
+#ifdef SINGLE_PRECISION_IO
+              // Assign data to float (single precision)
+              qlat::assign(qlat::Vector<ComplexF>((ComplexF*)iodata.data(), 3 * iodata.size()),qlat::get_data(f));
+#else
+              // Assign data to double (default precision)
+              qlat::assign(qlat::Vector<Complex>((Complex*)iodata.data(), 3 * iodata.size()),qlat::get_data(f));
+#endif
+              
+             
           }else{
 #endif
 #ifdef USE_MPI_IO
@@ -504,8 +516,13 @@ class BinaryIO {
               grid_layout[2]=gLattice[2];
               grid_layout[3]=gLattice[3];
               qlat::Geometry geo;
-              geo.init(grid_layout, 1);
-              qlat::Field<Complex> f;
+              geo.init(grid_layout);
+#ifdef SINGLE_PRECISION_IO
+              std::cout<< GridLogMessage<<"Single Precision " << std::endl;
+              qlat::Field<ComplexF> f; // Single precision
+#else
+              qlat::Field<Complex> f; // Double precision (default)
+#endif
               f.init(geo, 3);// 3 colors
               qlat::Coordinate new_layout;
               // new_layout: each mpi process writes a time slice
@@ -520,7 +537,13 @@ class BinaryIO {
                 new_layout[3] /= 2;
               }
               qlat::ShuffledFieldsWriter sfw(filename, new_layout, true);
-              qlat::assign(qlat::get_data(f), qlat::Vector<Complex>((Complex*)iodata.data(),3*iodata.size()));
+#ifdef SINGLE_PRECISION_IO
+              // Assign data to single precision
+              qlat::assign(qlat::get_data(f), qlat::Vector<ComplexF>((ComplexF*)iodata.data(), 3 * iodata.size()));
+#else
+              // Assign data to double precision
+              qlat::assign(qlat::get_data(f), qlat::Vector<Complex>((Complex*)iodata.data(), 3 * iodata.size()));
+#endif
               qlat::write(sfw,file,f);
           }else{
 #endif
@@ -675,7 +698,7 @@ class BinaryIO {
 
     thread_for(x,lsites, { munge(iodata[x], scalardata[x]); });
 
-    vectorizeFromLexOrdArray(scalardata,Umu);    
+    vectorizeFromLexOrdArray(scalardata,Umu);   
     grid->Barrier();
 
     timer.Stop();
