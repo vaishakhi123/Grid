@@ -402,22 +402,24 @@ class BinaryIO {
               grid_layout[3]=gLattice[3];
               qlat::Geometry geo;
               geo.init(grid_layout);
-#ifdef SINGLE_PRECISION_IO
-              std::cout<< GridLogMessage<<"Single Precision " << std::endl;
-              qlat::Field<ComplexF> f; // Single precision
-#else
-              qlat::Field<Complex> f; // Double precision (default)
-#endif
-              f.init(geo, 3);// 3 colors
-              qlat::read_field(f,filename,file);
-#ifdef SINGLE_PRECISION_IO
-              // Assign data to float (single precision)
-              qlat::assign(qlat::Vector<ComplexF>((ComplexF*)iodata.data(), 3 * iodata.size()),qlat::get_data(f));
-#else
-              // Assign data to double (default precision)
-              qlat::assign(qlat::Vector<Complex>((Complex*)iodata.data(), 3 * iodata.size()),qlat::get_data(f));
-#endif
               
+              const char* precision_mode = std::getenv("SINGLE_PRECISION");
+              
+              if (precision_mode != nullptr && std::string(precision_mode) == "1"){
+                  qlat::Field<ComplexF> f_single; // Declare single precision field
+                  std::cout<< GridLogMessage<<"Single Precision " << std::endl;
+                  f_single.init(geo, 3);// 3 colors
+                  qlat::read_field(f_single,filename,file);
+                  qlat::assign(qlat::Vector<ComplexF>((ComplexF*)iodata.data(), 3 * iodata.size()),qlat::get_data(f_single));
+              }
+              else {
+                  std::cout<< GridLogMessage<<"Double Precision " << std::endl;
+                  qlat::Field<Complex> f_double;   // Declare double precision field
+                  f_double.init(geo, 3);// 3 colors
+                  qlat::read_field(f_double,filename,file);
+                  qlat::assign(qlat::Vector<Complex>((Complex*)iodata.data(), 3 * iodata.size()),qlat::get_data(f_double));
+              }
+      
              
           }else{
 #endif
@@ -517,13 +519,6 @@ class BinaryIO {
               grid_layout[3]=gLattice[3];
               qlat::Geometry geo;
               geo.init(grid_layout);
-#ifdef SINGLE_PRECISION_IO
-              std::cout<< GridLogMessage<<"Single Precision " << std::endl;
-              qlat::Field<ComplexF> f; // Single precision
-#else
-              qlat::Field<Complex> f; // Double precision (default)
-#endif
-              f.init(geo, 3);// 3 colors
               qlat::Coordinate new_layout;
               // new_layout: each mpi process writes a time slice
               new_layout[0]=1;
@@ -537,14 +532,22 @@ class BinaryIO {
                 new_layout[3] /= 2;
               }
               qlat::ShuffledFieldsWriter sfw(filename, new_layout, true);
-#ifdef SINGLE_PRECISION_IO
-              // Assign data to single precision
-              qlat::assign(qlat::get_data(f), qlat::Vector<ComplexF>((ComplexF*)iodata.data(), 3 * iodata.size()));
-#else
-              // Assign data to double precision
-              qlat::assign(qlat::get_data(f), qlat::Vector<Complex>((Complex*)iodata.data(), 3 * iodata.size()));
-#endif
-              qlat::write(sfw,file,f);
+              const char* precision_mode = std::getenv("SINGLE_PRECISION");
+              if (precision_mode != nullptr && std::string(precision_mode) == "1"){
+                  std::cout<< GridLogMessage<<"Single Precision " << std::endl;
+                  qlat::Field<ComplexF> f_single; // Declare single precision field
+                  f_single.init(geo, 3);// 3 colors
+                  qlat::assign(qlat::get_data(f_single), qlat::Vector<ComplexF>((ComplexF*)iodata.data(), 3 * iodata.size()));
+                  qlat::write(sfw,file,f_single);
+              }
+              else {
+                  std::cout<< GridLogMessage<<"Double Precision " << std::endl;
+                  qlat::Field<Complex> f_double;   // Declare double precision field
+                  f_double.init(geo, 3);// 3 colors
+                  qlat::assign(qlat::get_data(f_double), qlat::Vector<Complex>((Complex*)iodata.data(), 3 * iodata.size()));
+                  qlat::write(sfw,file,f_double);
+              }
+              
           }else{
 #endif
 #ifdef USE_MPI_IO
